@@ -4,14 +4,15 @@ extern crate diesel;
 extern crate serde_derive;
 extern crate serde_json;
 
+use env_logger;
 use hyper::server::Http;
 use log::info;
 
 use microservice::Microservice;
 
 mod database;
-mod html;
 mod functions;
+mod html;
 mod microservice;
 mod models;
 mod schema;
