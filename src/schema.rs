@@ -1,5 +1,3 @@
-use diesel::table;
-
 table! {
     messages (id) {
         id -> Int4,
