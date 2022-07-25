@@ -2,28 +2,17 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 
-use futures::future::{Future, FutureResult};
-use hyper::{Chunk, StatusCode};
-use hyper::Error as HyperError;
+use futures::future::FutureResult;
 use hyper::header::{ContentLength, ContentType};
 use hyper::server::Response as HyperServerResponse;
+use hyper::Error as HyperError;
+use hyper::{Chunk, StatusCode};
 use log::debug;
-use serde_derive;
 use serde_json::json;
+use url;
 
 use super::html::render_page;
-use super::models;
-use super::schema;
-
-pub struct NewMessage {
-    username: String,
-    message: String,
-}
-
-pub struct TimeRange {
-    pub before: Option<i64>,
-    pub after: Option<i64>,
-}
+use super::models::{Message, NewMessage, TimeRange};
 
 pub fn parse_form(form_chunk: Chunk) -> FutureResult<NewMessage, HyperError> {
     let mut form = url::form_urlencoded::parse(form_chunk.as_ref())
@@ -35,21 +24,21 @@ pub fn parse_form(form_chunk: Chunk) -> FutureResult<NewMessage, HyperError> {
         futures::future::ok(NewMessage { username, message })
     } else {
         futures::future::err(HyperError::from(io::Error::new(
-            io::ErrorKid::InvalidInput,
+            io::ErrorKind::InvalidInput,
             "Missing field 'message'",
         )))
     }
 }
 
 pub fn make_post_response(
-    result: Result<i62, HyperError>,
-) -> FutureResult<HyperResponse, HyperError> {
+    result: Result<i64, HyperError>,
+) -> FutureResult<HyperServerResponse, HyperError> {
     match result {
         Ok(timestamp) => {
             let payload = json!({ "timestamp": timestamp }).to_string();
-            let response = HyperResponse::new()
-                .with_head(ContentLength(payload.len() as u64))
-                .with_head(ContentType::json())
+            let response = HyperServerResponse::new()
+                .with_header(ContentLength(payload.len() as u64))
+                .with_header(ContentType::json())
                 .with_body(payload);
             debug!("{:?}", response);
             futures::future::ok(response)
@@ -58,9 +47,9 @@ pub fn make_post_response(
     }
 }
 
-pub fn make_error_response(error_message: &str) -> FutureResult<HyperResponse, HyperError> {
-    let payload = json!({ "error" }: error_message).to_string();
-    let response = HyperResponse::new()
+pub fn make_error_response(error_message: &str) -> FutureResult<HyperServerResponse, HyperError> {
+    let payload = json!({ "error": error_message }).to_string();
+    let response = HyperServerResponse::new()
         .with_status(StatusCode::InternalServerError)
         .with_header(ContentLength(payload.len() as u64))
         .with_header(ContentType::json())
@@ -96,16 +85,16 @@ pub fn parse_query(query: &str) -> Result<TimeRange, String> {
 
 pub fn make_get_response(
     messages: Option<Vec<Message>>,
-) -> FutureResult<HyperResponse, HyperError> {
+) -> FutureResult<HyperServerResponse, HyperError> {
     let response = match messages {
         Some(messages) => {
             let body = render_page(messages);
 
-            HyperResponse::new()
+            HyperServerResponse::new()
                 .with_header(ContentLength(body.len() as u64))
                 .with_body(body)
         }
-        None => HyperResponse::new().with_status(StatusCode::InternalServerError),
+        None => HyperServerResponse::new().with_status(StatusCode::InternalServerError),
     };
 
     debug!("{:?}", response);

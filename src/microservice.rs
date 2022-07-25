@@ -1,18 +1,16 @@
-use env_logger;
 use futures;
 use futures::future::Future;
 use futures::Stream;
 use hyper::server::{Request as HyperRequest, Response as HyperResponse, Service as HyperService};
 use hyper::Error as HyperError;
 use hyper::Method::{Get, Post};
-use hyper::{Chunk, StatusCode};
-use log;
+use hyper::StatusCode;
 
-use super::database::{connect_to_db, write_to_db};
-use super::message::{
+use super::database::{connect_to_db, query_db, write_to_db};
+use super::functions::{
     make_error_response, make_get_response, make_post_response, parse_form, parse_query,
-    NewMessage, TimeRange,
 };
+use super::models::TimeRange;
 
 pub struct Microservice;
 
@@ -51,7 +49,7 @@ impl HyperService for Microservice {
                     }),
                 };
                 let response = match time_range {
-                    Ok(time_range) => make_get_response(query_qb(time_range, &db_connection)),
+                    Ok(time_range) => make_get_response(query_db(time_range, &db_connection)),
                     Err(error) => make_error_response(&error),
                 };
                 Box::new(response)

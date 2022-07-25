@@ -1,4 +1,5 @@
-use schema::messages;
+use super::schema::messages;
+use diesel::{Insertable, Queryable};
 
 #[derive(Queryable, Serialize, Debug)]
 pub struct Message {
@@ -13,4 +14,9 @@ pub struct Message {
 pub struct NewMessage {
     pub username: String,
     pub message: String,
+}
+
+pub struct TimeRange {
+    pub before: Option<i64>,
+    pub after: Option<i64>,
 }
